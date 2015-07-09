@@ -1,6 +1,8 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
+#Updated by Jessica Wilson July 9th 2015
+
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
 cat /var/log/apache2/access.log | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n > IPCounts.txt;
@@ -16,7 +18,7 @@ do
 	fi
 done < IPCounts.txt;
 
-#pull all requests for pages not related to js/css
+#filter out all requests pertaining to js and css
 cat /var/log/apache2/access.log | grep -v -E 'js|css|favicon|img|fonts'  > accessedPages.txt;
 
 #find bots out of those pages assuming that only robots visit robots.txt
@@ -36,7 +38,6 @@ cat reducedHits.txt |grep -v -f "badBots.txt" | grep -o '.*HTTP' | grep -v 'OPTI
 cat actualHits.txt | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n> goodVisitors.txt;
 
 #find out where the IP's are located from good visitors
-
 #rm an old file if it exists, creates it if it doesn't and removes it to ensure we start fresh
 touch visitorsLoc.txt;
 rm visitorsLoc.txt;
@@ -49,9 +50,23 @@ do
 	echo $a $b $c $d $e >> visitorsLoc.txt;
 done < goodVisitors.txt
 
+#find out where the IP's are located from bad bots
+#rm an old file if it exists, creates it if it doesn't and removes it to ensure we start fresh
+touch badBotLoc.txt;
+rm badBotLoc.txt;
+
+while read a;
+do 
+	b=$(echo `curl -s ipinfo.io/$a/city`);
+	c=$(echo `curl -s ipinfo.io/$a/region`);
+	d=$(echo `curl -s ipinfo.io/$a/country`);
+	echo $a $b $c $d >> badBotLoc.txt;
+done < badBots.txt
+
 #remove files I don't want to review afterwards
 rm goodVisitors.txt;
 rm accessedPages.txt;
 rm actualHits.txt;
 rm badVisits.txt;
 rm reducedHits.txt;
+rm badBots.txt;

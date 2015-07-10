@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
-#Updated by Jessica Wilson July 9th 2015
+#Updated by Jessica Wilson July 10th 2015
 
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
@@ -37,29 +37,33 @@ cat reducedHits.txt |grep -v -f "badBots.txt" | grep -o '.*HTTP' | grep -v 'OPTI
 #pull out IP's for good visitors
 cat actualHits.txt | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n> goodVisitors.txt;
 
-#find out where the IP's are located from good visitors
+#find out where the IP's are located from good visitors, parse the json object returned from curl with jq
 #rm an old file if it exists, creates it if it doesn't and removes it to ensure we start fresh
 touch visitorsLoc.txt;
 rm visitorsLoc.txt;
 
 while read a b;
 do 
-	c=$(echo `curl -s ipinfo.io/$b/city`);
-	d=$(echo `curl -s ipinfo.io/$b/region`);
-	e=$(echo `curl -s ipinfo.io/$b/country`);
+	curl -s ipinfo.io/$b/geo > temp.txt;
+	
+	c=$(echo `cat temp.txt | jq '.city'`);
+	d=$(echo `cat temp.txt | jq '.region'`);
+	e=$(echo `cat temp.txt| jq '.country'`);
 	echo $a $b $c $d $e >> visitorsLoc.txt;
 done < goodVisitors.txt
 
-#find out where the IP's are located from bad bots
+#find out where the IP's are located from bad bots, parse the json object returned from curl with jq
 #rm an old file if it exists, creates it if it doesn't and removes it to ensure we start fresh
 touch badBotLoc.txt;
 rm badBotLoc.txt;
 
 while read a;
 do 
-	b=$(echo `curl -s ipinfo.io/$a/city`);
-	c=$(echo `curl -s ipinfo.io/$a/region`);
-	d=$(echo `curl -s ipinfo.io/$a/country`);
+	curl -s ipinfo.io/$a/geo > temp.txt;
+
+	b=$(echo `cat temp.txt | jq '.city'`);
+	c=$(echo `cat temp.txt | jq '.region'`);
+	d=$(echo `cat temp.txt | jq '.country'`);
 	echo $a $b $c $d >> badBotLoc.txt;
 done < badBots.txt
 
@@ -70,3 +74,4 @@ rm actualHits.txt;
 rm badVisits.txt;
 rm reducedHits.txt;
 rm badBots.txt;
+rm temp.txt;

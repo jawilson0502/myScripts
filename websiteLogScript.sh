@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
-#Updated by Jessica Wilson July 15 2015
+#Updated by Jessica Wilson July 15th 2015
+
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
 cat /var/log/apache2/access.log | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n > IPCounts.txt;
@@ -35,7 +36,7 @@ cat reducedHits.txt | grep -E '404|proxy|seo|Synapse' > badVisits.txt;
 cat badVisits.txt | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq >> badBots.txt;
 
 #filter out all malicious visits
-cat reducedHits.txt |grep -v -f "badBots.txt" | grep -o '.*HTTP' | grep -v 'OPTIONS' | grep -v -E "127.0.0.1|10.0.0" > actualHits.txt;
+cat reducedHits.txt |grep -v -f "badBots.txt" | grep -v 'OPTIONS' | grep -v -E "127.0.0.1|10.0.0" > actualHits.txt;
 
 #pull out IP's for good visitors
 cat actualHits.txt | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n> goodVisitors.txt;

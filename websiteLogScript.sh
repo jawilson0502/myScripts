@@ -1,8 +1,7 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
-#Updated by Jessica Wilson July 15th 2015
-
+#Updated by Jessica Wilson July 15 2015
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
 cat /var/log/apache2/access.log | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n > IPCounts.txt;

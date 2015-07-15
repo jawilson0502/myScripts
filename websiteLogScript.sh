@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
-#Updated by Jessica Wilson July 13th 2015
+#Updated by Jessica Wilson July 15th 2015
 
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
@@ -53,6 +53,10 @@ do
 	c=$(echo `cat temp.txt | jq '.city'`);
 	d=$(echo `cat temp.txt | jq '.region'`);
 	e=$(echo `cat temp.txt| jq '.country'`);
+	
+	#set up for UA string encoding
+	f=$(echo `cat actualHits.txt | grep "$b" |  sed s'/.$//' | sed 's/.*"//' | head -1`);
+	
 	echo $a $b $c $d $e >> visitorsLoc.txt;
 	cat actualHits.txt | grep "$b" | grep -E -o  " /.*?\.html | / " | sort | uniq >> visitorsLoc.txt
 	echo "----------------------------------" >> visitorsLoc.txt;

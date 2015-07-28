@@ -92,7 +92,7 @@ fi
 #condense all revelant information into one easy to read report
 #break line
 echo "*************************" >> /home/pi/linux_project/report_$DATE.txt;
-echo "Here is a the break down of intrusions on: $DATE" >> /home/pi/linux_project/report_$DATE.txt;
+echo "Here is the break down of intrusions on: $DATE" >> /home/pi/linux_project/report_$DATE.txt;
 #break line
 echo "*************************" >> /home/pi/linux_project/report_$DATE.txt;
 echo "Total Number of Attempts: $attempts" >> /home/pi/linux_project/report_$DATE.txt;

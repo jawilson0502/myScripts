@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #Created by Jessica Wilson April 24th, 2015
+#Updated on July 29th, 2015
 
 #Pull current date for file name
 DATE=$(date +%Y_%m_%d);
@@ -12,18 +13,19 @@ cat /var/log/auth.log.1 | grep -i "failed\|failure" | grep -o "[0-9]\{1,3\}\.[0-
 cat /home/pi/linux_project/ip_$DATE.txt | sort -n | uniq -c | sort -n > /home/pi/linux_project/ip_sorted_$DATE.txt ;
 
 #Take each unique IP and assign a country code
-while read a b;
+while read attempts ipAddress;
 do
-	c=$(echo `curl -s ipinfo.io/$b/country`);
-	echo $a $b $c >> /home/pi/linux_project/ip_country_$DATE.txt;
+	country = $(echo `curl -s ipinfo.io/$ipAddress/country`);
+	echo $attempts $ipAddress $country >> /home/pi/linux_project/ip_country_$DATE.txt;
 done < /home/pi/linux_project/ip_sorted_$DATE.txt
 
 #Sort by  County
 
-#how many ips are in the original ip pull
-attempts=$(echo `cat /home/pi/linux_project/ip_$DATE.txt | wc -l`);
+#how many ips are in the original ip pull, not uniqued
+totalAttempts=$(echo `cat /home/pi/linux_project/ip_$DATE.txt | wc -l`);
 
 #declare current country variables for adding up big data
+#I chose the top countries I saw repeated
 declare -i china_tries=0;
 declare -i japan_tries=0;
 declare -i hongkong_tries=0;
@@ -35,24 +37,24 @@ declare -i mexico_tries=0;
 declare -i other_tries=0;
 
 #while loop running through txt sorted by attempts and Country Code
-while read a b c;
+while read attempts ipAddress country;
  do
-	if [ "$c" = "CN" ]
-		then china_tries=$china_tries+$a;
-		elif [ "$c" = "JP" ]
-			then japan_tries=$japan_tries+$a;
-		elif [ "$c" = "HK" ]
-			then hongkong_tries=$hongkong_trie+$a;
-		elif [ "$c" = "TW" ]
-			then taiwan_tries=$taiwan_tries+$a;
-		elif [ "$c" = "US" ]
-			then us_tries=$us_tries+$a;
-		elif [ "$c" = "BA" ]
-			then bosnia_tries=$bosnia_tries+$a;
-		elif [ "$c" = "RU" ]
-			then russia_tries=$russia_tries+$a;
-		elif [ "$c" =  "MX" ]
-			then mexico_tries=$mexico_tries+$a;
+	if [ "$country" = "CN" ]
+		then china_tries=$china_tries+$attempts;
+		elif [ "$country" = "JP" ]
+			then japan_tries=$japan_tries+$attempts;
+		elif [ "$country" = "HK" ]
+			then hongkong_tries=$hongkong_trie+$attempts;
+		elif [ "$country" = "TW" ]
+			then taiwan_tries=$taiwan_tries+$attempts;
+		elif [ "$country" = "US" ]
+			then us_tries=$us_tries+$attempts;
+		elif [ "$country" = "BA" ]
+			then bosnia_tries=$bosnia_tries+$attempts;
+		elif [ "$country" = "RU" ]
+			then russia_tries=$russia_tries+$attempts;
+		elif [ "$country" =  "MX" ]
+			then mexico_tries=$mexico_tries+$attempts;
 	#throw it to "other" if I do not have the country currently. Try to add countries every week or so
 		else
 			other_tries=$other_tries+$a;
@@ -92,10 +94,10 @@ fi
 #condense all revelant information into one easy to read report
 #break line
 echo "*************************" >> /home/pi/linux_project/report_$DATE.txt;
-echo "Here is the break down of intrusions on: $DATE" >> /home/pi/linux_project/report_$DATE.txt;
+echo "Here is a the break down of intrusions on: $DATE" >> /home/pi/linux_project/report_$DATE.txt;
 #break line
 echo "*************************" >> /home/pi/linux_project/report_$DATE.txt;
-echo "Total Number of Attempts: $attempts" >> /home/pi/linux_project/report_$DATE.txt;
+echo "Total Number of Attempts: $totalAttempts" >> /home/pi/linux_project/report_$DATE.txt;
 #pull in the attempts per country
 echo `cat /home/pi/linux_project/attemptsbycountry_$DATE.txt >> /home/pi/linux_project/report_$DATE.txt`;
 #break line

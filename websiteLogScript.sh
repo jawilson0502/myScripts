@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
-#Updated by Jessica Wilson July 15th 2015
+#Updated by Jessica Wilson August 14th, 2015
 
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
@@ -12,12 +12,13 @@ touch badBots.txt;
 rm badBots.txt;
 
 #sometimes mobile phones don't load everything, but still are legit visits, needed to filter out
-while read a b;
+while read occurrence ipAddress;
 do 
-	if [ $a -eq 1 ];then 
-		c=$(echo `cat /var/log/apache2/access.log | grep "$b" | grep "Mobile"`);
-		if [ -z "$c" ]; then 
-			echo $b >> badBots.txt;
+	if [ $occurrence -eq 1 ];then 
+		mobileString=$(echo `cat /var/log/apache2/access.log | grep "$ipAddress" | grep "Mobile"`);
+		#-z means string is null, so -z $mobileString is true if $mobileString has no value
+		if [ -z "$mobileString" ]; then 
+			echo $ipAddress >> badBots.txt;
 		fi
 	fi
 done < IPCounts.txt;
@@ -31,11 +32,23 @@ cat accessedPages.txt | grep -E 'bot' |grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-
 #filter out all known robots
 cat accessedPages.txt | grep -v -f "knownBots.txt" | grep -v -f "badBots.txt" > reducedHits.txt;
 
-#Assume that if someone gets a 404 or links somehow with something that says proxy or seo, they maliciously went there
-cat reducedHits.txt | grep -E '404|proxy|seo|Synapse' > badVisits.txt;
+#Assume that if someone gets a 404 or links somehow with something that says proxy or seo, or does a head request, they maliciously went there, after filtering 
+#out anything that would have announced that it was a bot by visiting robots.txt
+cat reducedHits.txt | grep -E '404|proxy|seo|Synapse|HEAD' > badVisits.txt;
 cat badVisits.txt | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq >> badBots.txt;
 
-#filter out all malicious visits
+#filter out anything that does not send a user agent string and assume it is malicious
+while read entireString;
+do
+	uaString=$(echo $entireString |  sed s'/.$//' | sed 's/.*"//');
+	#When a User Agent string is blank, it shows up as "-" in the log
+	if [ "$uaString" == "-" ]; then
+		echo $entireString | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" >> badBots.txt;
+	fi
+
+done < reducedHits.txt;
+
+#filter out all malicious visits and internal visits
 cat reducedHits.txt |grep -v -f "badBots.txt" | grep -v 'OPTIONS' | grep -v -E "127.0.0.1|10.0.0" > actualHits.txt;
 
 #pull out IP's for good visitors
@@ -46,19 +59,22 @@ cat actualHits.txt | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{
 touch visitorsLoc.txt;
 rm visitorsLoc.txt;
 
-while read a b;
+while read occurrence ipAddress;
 do 
-	curl -s ipinfo.io/$b/geo > temp.txt;
+	#Perform a curl, grabbing all geo location information, then parse the JSON to pull out the information I want
+	curl -s ipinfo.io/$ipAddress/geo > temp.txt;
 	
-	c=$(echo `cat temp.txt | jq '.city'`);
-	d=$(echo `cat temp.txt | jq '.region'`);
-	e=$(echo `cat temp.txt| jq '.country'`);
+	city=$(echo `cat temp.txt | jq '.city'`);
+	region=$(echo `cat temp.txt | jq '.region'`);
+	country=$(echo `cat temp.txt| jq '.country'`);
 	
 	#set up for UA string encoding
-	f=$(echo `cat actualHits.txt | grep "$b" |  sed s'/.$//' | sed 's/.*"//' | head -1`);
+	#f=$(echo `cat actualHits.txt | grep "$b" |  sed s'/.$//' | sed 's/.*"//' | head -1`);
 	
-	echo $a $b $c $d $e >> visitorsLoc.txt;
-	cat actualHits.txt | grep "$b" | grep -E -o  " /.*?\.html | / " | sort | uniq >> visitorsLoc.txt
+	#Set up the style of the report, first showing all the information on the IP
+	echo $occurrence $ipAddress $city $region $country >> visitorsLoc.txt;
+	#Next, pull out which pages they visited from my site
+	cat actualHits.txt | grep "$ipAddress" | grep -E -o  " /.*?\.html | / | /.*?\.php" | sort | uniq >> visitorsLoc.txt
 	echo "----------------------------------" >> visitorsLoc.txt;
 done < goodVisitors.txt
 
@@ -70,14 +86,15 @@ sed -i 's/ \/ / \/landing/' visitorsLoc.txt;
 touch badBotLoc.txt;
 rm badBotLoc.txt;
 
-while read a;
+while read ipAddress;
 do 
-	curl -s ipinfo.io/$a/geo > temp.txt;
+	#Curl all geo location information as before with the good visitor's IP, process for a report
+	curl -s ipinfo.io/$ipAddress/geo > temp.txt;
 
-	b=$(echo `cat temp.txt | jq '.city'`);
-	c=$(echo `cat temp.txt | jq '.region'`);
-	d=$(echo `cat temp.txt | jq '.country'`);
-	echo $a $b $c $d >> badBotLoc.txt;
+	city=$(echo `cat temp.txt | jq '.city'`);
+	region=$(echo `cat temp.txt | jq '.region'`);
+	country=$(echo `cat temp.txt | jq '.country'`);
+	echo $ipAddress $city $region $country >> badBotLoc.txt;
 done < badBots.txt
 
 #remove files I don't want to review afterwards

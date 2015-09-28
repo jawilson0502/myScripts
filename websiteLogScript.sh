@@ -73,7 +73,7 @@ do
 	
 	#use python to encode the string specifically for useragentapi.com to return JSON
 	encodedUAString=$(python urlencode.py "$userAgentString");
-	decodedUAString=$(curl -G -s "http://useragentapi.com/api/v2/json/2b97ea2b/$encodedUAString");
+	decodedUAString=$(curl -G -s "http://useragentapi.com/api/v2/json/<api_key>/$encodedUAString");
 	
 	#parse through returned JSON to pull specific components
 	browserName=$(echo "$decodedUAString" | jq '.browser_name');

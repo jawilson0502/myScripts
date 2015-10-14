@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Created by Jessica Wilson July 5th 2015
-#Updated by Jessica Wilson September 28th, 2015 with help from archdukeofdoge
+#Updated by Jessica Wilson October 14, 2015 adding additional filters
 
 
 #pull out any ip's that only see a single page w/o loading css (which is a 2nd page load- assuming it is a bad bot
@@ -32,9 +32,9 @@ cat accessedPages.txt | grep -E -i 'bot' |grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.
 #filter out all known robots
 cat accessedPages.txt | grep -v -f "knownBots.txt" | grep -v -f "badBots.txt" > reducedHits.txt;
 
-#Assume that if someone gets a 404 or links somehow with something that says proxy or seo, or does a head request, they maliciously went there, after filtering 
+#Assume that if someone gets a 404/403 or links somehow with something that says proxy or seo, or does a head request, they maliciously went there, after filtering 
 #out anything that would have announced that it was a bot by visiting robots.txt
-cat reducedHits.txt | grep -E -i '404|proxy|seo|Synapse|HEAD|scan' > badVisits.txt;
+cat reducedHits.txt | grep -E -i '404|403|proxy|seo|Synapse|HEAD|scan|crawler' > badVisits.txt;
 cat badVisits.txt | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq >> badBots.txt;
 
 #filter out anything that does not send a user agent string and assume it is malicious
@@ -48,6 +48,21 @@ do
 
 done < reducedHits.txt;
 
+while read entireString;
+do 
+	#go through the IP address I've already filter through somewhat to find any maybe valid IPs
+	ipString=$(echo $entireString | grep -o "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}");
+	visitCss=$(echo ` cat /var/log/apache2/access.log | grep "$ipString" | grep -E "css|js"`);
+	
+	#anything that does not have CSS or JS will be pulled and put into bad bots
+	if [ -z "$visitCss" ]; then
+		echo $ipString >> badBots.txt;
+	fi
+done < reducedHits.txt;
+
+#clean up my bad bots file
+cat badBots.txt | sort -n | sort -u -o badBots.txt
+	
 #filter out all malicious visits and internal visits
 cat reducedHits.txt |grep -v -f "badBots.txt" | grep -v 'OPTIONS' | grep -v -E "127.0.0.1|10.0.0" > actualHits.txt;
 
@@ -73,7 +88,7 @@ do
 	
 	#use python to encode the string specifically for useragentapi.com to return JSON
 	encodedUAString=$(python urlencode.py "$userAgentString");
-	decodedUAString=$(curl -G -s "http://useragentapi.com/api/v2/json/<api_key>/$encodedUAString");
+	decodedUAString=$(curl -G -s "http://useragentapi.com/api/v2/json/2b97ea2b/$encodedUAString");
 	
 	#parse through returned JSON to pull specific components
 	browserName=$(echo "$decodedUAString" | jq '.browser_name');
@@ -115,5 +130,5 @@ rm goodVisitors.txt;
 rm accessedPages.txt;
 rm badVisits.txt;
 rm reducedHits.txt;
-rm badBots.txt;
+#rm badBots.txt;
 rm actualHits.txt;

@@ -119,4 +119,6 @@ with open(OUTPUT_PATH, 'w') as f:
                      ua['platform_name']))
 
         except:
+            # Currently, any unicode will cause an except
+            # TODO: Handle unicode better
             pass
